@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { IoSend } from "react-icons/io5";
 import TopNavigation from "./TopNavigation";
-import { Navigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useSendMessage } from "../hooks/useSendMessage";
 import { MessagesProps } from "../types/messages";
 import Message from "./Message";
@@ -21,12 +21,13 @@ export default function ChatPanel() {
   const [id, setId] = useState(paramsId);
   const [messages, setMessages] = useState<MessagesProps[]>([]);
 
+  const navigate = useNavigate();
+
   const hasMessages = messages.length;
 
   const { isLoading, data } = useQuery({
     queryKey: ["id", id],
     queryFn: async () => {
-      console.log(id);
       const result = await axios.get(`${BASE_URL}/review/${id}`);
       console.log(result);
       return result;
@@ -34,39 +35,48 @@ export default function ChatPanel() {
     enabled: !!id,
   });
 
-  const { mutate: sendMessage } = useSendMessage(setMessages);
+  const { mutate: sendMessage, isPending } = useSendMessage(setMessages);
 
   const highlighted = hljs.highlight(code, { language: "javascript" }).value;
 
   useEffect(() => {
-    if (!data) {
-      <Navigate to="/" />;
+    if (!data || !data.data || data.data.length === 0) {
+      navigate("/");
       return;
     }
-
-    setMessages(
-      data.data.map(
-        (item) =>
-          ({ sender: item.sender, content: item.content } as MessagesProps)
-      )
+    const mappedMessages = data.data.map(
+      (item) =>
+        ({
+          sender: item.sender.toLowerCase(),
+          content: item.content,
+        } as MessagesProps)
     );
+
+    if (mappedMessages.length > messages.length) {
+      setMessages(mappedMessages);
+    }
   }, [data]);
 
   const handleSubmit = () => {
-    if (!id) {
-      const uuid = uuidv4();
-      history.pushState(null, "", `/${uuid}`);
-      setId(uuid);
+    let currentId = id;
+
+    if (!currentId) {
+      currentId = uuidv4();
+      history.pushState(null, "", `/${currentId}`);
+      setId(currentId);
     }
 
-    sendMessage({ id: id || "", code });
-
-    setMessages((messages) => [
-      ...messages,
+    setMessages((prevMessages) => [
+      ...prevMessages,
       { sender: "USER", content: code, loading: false },
       { sender: "AI", content: "Ai is typing...", loading: true },
     ]);
+
+    sendMessage({ id: currentId, code });
+
+    setCode("");
   };
+
   return (
     <main className="w-full h-full flex flex-col">
       <TopNavigation />
@@ -100,11 +110,12 @@ export default function ChatPanel() {
               className="absolute top-0 left-0 w-full h-full p-4 text-sm font-mono text-transparent bg-transparent resize-none caret-black z-10 outline-none"
               placeholder="Paste your JavaScript or TypeScript code here..."
               required
+              disabled={isPending}
             />
             <button
               type="submit"
               className="p-2 absolute right-4 bottom-4 z-50 cursor-pointer bg-blue-600 text-white rounded-full hover:bg-blue-700 hover:scale-[102%] transition"
-              disabled={!code.trim()}
+              disabled={isPending}
             >
               <IoSend className="size-5" />
             </button>
