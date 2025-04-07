@@ -3,12 +3,12 @@
 <h4>1. Clone repository</h4>
 
  ```bash
-   git clone https://github.com/Ontonieja/chat-app.git
+   git clone https://github.com/Ontonieja/treeline-ai-task.git
 ```
 
 <h4>2. Create .env files for the server</h4>
 
-- For the server, create `server/.env` and add required variables. AI API key is from the free resource so feel free to use it(might be a little laggy 😄)
+- For the server, create `server/.env` and add required variables. AI API key is from the free resource so feel free to use it (might be a little laggy 😄)
 ```bash
 PORT = 3000
 DATABASE_URL="file:./dev.db"
